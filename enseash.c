@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <time.h>
 #define PROMPT "enseash %% "
 
 // Fonction pour utiliser write
@@ -18,7 +18,7 @@ int main() {
     char *args[16];    
     pid_t pid;        
     int status; //Statut pour attendre la fin du child process      
-
+    struct timespec start_time, end_time; 
     write_string("Bienvenue dans le shell de l'ENSEA\n");
     write_string("Pour quitter, tapez 'exit'\n");
 
@@ -78,8 +78,8 @@ int main() {
                snprintf(bg_message, sizeof(bg_message), "[%d] Running in background\n", pid);
                write_string(bg_message);
            } else {
-               // Le parent attend la fin de l'exécution de l'enfant grâce à waitpid
-               waitpid(pid, &status, 0);
+               
+              
                // Une fois que l'enfant a terminé, le parent reprend la boucle
                // pour afficher le prompt et attendre une nouvelle commande.
 
@@ -89,13 +89,29 @@ int main() {
                //WIFEXITED(status)== true, si the child porcess s'est terminé normalement
                //WIFSIGNALED(status)==true, si the child process s'est terminé à cause d'un signal
                //WTERMSIG(status) renvoie alors le numéro du signal qui a causé la fin du child process
-               // Vérification du statut du processus enfant
+               // 1. Capture du Temps de Début Avant l'Exécution de la Commande
+                if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+                    write_string("clock_gettime failed\n");
+                    // Continuer même si la mesure échoue
+                }
+                // Le parent attend la fin de l'exécution de l'enfant grâce à waitpid
+                
+                waitpid(pid, &status, 0);
+                // Mesure du temps après l'exécution de la commande
+                if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+                    write_string("clock_gettime failed\n");
+                    // Continuer même si la mesure échoue
+                }
+                // Calcul du temps écoulé en secondes et nanosecondes
+                double elapsed_sec = end_time.tv_sec - start_time.tv_sec;
+                double elapsed_nsec = end_time.tv_nsec - start_time.tv_nsec;
+                double total_elapsed = elapsed_sec + elapsed_nsec / 1e9;
                if (WIFEXITED(status)) {
                    // Si l'enfant s'est terminé normalement, récupérer le code de sortie
-                   printf("code exit : %d\n", WEXITSTATUS(status));
+                   printf("code exit : %d , temps d'exécution : %.6f secondes\n", WEXITSTATUS(status), total_elapsed);
                } else if (WIFSIGNALED(status)) {
                    // Si l'enfant a été terminé par un signal, récupérer le numéro du signal
-                   printf("signal exit: %d\n", WTERMSIG(status));
+                   printf("signal exit: %d,, temps d'exécution : %.6f secondes\n", WTERMSIG(status), total_elapsed);
                }
            }
         }
