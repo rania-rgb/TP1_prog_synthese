@@ -47,6 +47,13 @@ int main() {
             args[i] = strtok(NULL, " ");
         }
 
+        // Vérifie si la commande se termine par '&'
+        int is_background = 0;
+        if (i > 0 && strcmp(args[i - 1], "&") == 0) {
+            is_background = 1;
+            args[i - 1] = NULL; // Supprime '&' des arguments
+        }
+
         // Fork a child process
         pid = fork();
         if (pid == -1) { //Echec du fork
@@ -65,32 +72,32 @@ int main() {
             write_string("Command not found\n");
             exit(-1);
         } else { // Parent process
-           // Le parent attend la fin de l'exécution de l'enfant grâce à waitpid
-            waitpid(pid, &status, 0);
-             // Une fois que l'enfant a terminé, le parent reprend la boucle
-            // pour afficher le prompt et attendre une nouvelle commande.
+           if (is_background) {
+               // Processus en arrière-plan : affiche le PID et ne pas attendre
+               char bg_message[64];
+               snprintf(bg_message, sizeof(bg_message), "[%d] Running in background\n", pid);
+               write_string(bg_message);
+           } else {
+               // Le parent attend la fin de l'exécution de l'enfant grâce à waitpid
+               waitpid(pid, &status, 0);
+               // Une fois que l'enfant a terminé, le parent reprend la boucle
+               // pour afficher le prompt et attendre une nouvelle commande.
 
-            //Signaux:Un signal est une méthode utilisée par le système d'exploitation pour envoyer un message à un processus. Ce message
-            // informe le processus qu'un événement particulier s'est produit ou lui demande de faire quelque chose (comme se terminer ou redémarrer).
+               //Signaux:Un signal est une méthode utilisée par le système d'exploitation pour envoyer un message à un processus. Ce message
+               // informe le processus qu'un événement particulier s'est produit ou lui demande de faire quelque chose (comme se terminer ou redémarrer).
 
-            //WIFEXITED(status)== true, si the child porcess s'est terminé normalement
-            //WIFSIGNALED(status)==true, si the child process s'est terminé à cause d'un signal
-            //WTERMSIG(status) renvoie alors le numéro du signal qui a causé la fin du child process
-            // Vérification du statut du processus enfant
-            if (WIFEXITED(status)) {
-                // Si l'enfant s'est terminé normalement, récupérer le code de sortie
-                int exit_code = WEXITSTATUS(status);
-                char prompt[128]; //prompt est une variable locale temporaire, dédiée uniquement à la gestion du texte du prompt.
-                //prompt: son rôle est de formater et afficher le message de statut
-                snprintf(prompt, sizeof(prompt), "enseash [exit:%d] %% ", exit_code);
-                write_string(prompt);
-            } else if (WIFSIGNALED(status)) {
-                // Si l'enfant a été terminé par un signal, récupérer le numéro du signal
-                int signal = WTERMSIG(status);
-                char prompt[128];
-                snprintf(prompt, sizeof(prompt), "enseash [sign:%d] %% ", signal);
-                write_string(prompt);
-            }
+               //WIFEXITED(status)== true, si the child porcess s'est terminé normalement
+               //WIFSIGNALED(status)==true, si the child process s'est terminé à cause d'un signal
+               //WTERMSIG(status) renvoie alors le numéro du signal qui a causé la fin du child process
+               // Vérification du statut du processus enfant
+               if (WIFEXITED(status)) {
+                   // Si l'enfant s'est terminé normalement, récupérer le code de sortie
+                   printf("code exit : %d\n", WEXITSTATUS(status));
+               } else if (WIFSIGNALED(status)) {
+                   // Si l'enfant a été terminé par un signal, récupérer le numéro du signal
+                   printf("signal exit: %d\n", WTERMSIG(status));
+               }
+           }
         }
     }
 
