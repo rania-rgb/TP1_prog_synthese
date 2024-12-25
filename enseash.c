@@ -46,7 +46,10 @@ int main() {
             i++;
             args[i] = strtok(NULL, " ");
         }
-
+        //is_background s'occupe de l'arrière-plan: 1 pour arrière-plan et 0 pour plan principal. Si il y'a "&" le terminal se lance en arrière-plan
+        //et donne immédiatement la main à l'utilisateur de rentrer des nouvelles commandes. 
+        //Exemple : sleep 2 , je vais attendre 2 secondes jusqu'à ce que ça s'exécute
+        //si je fais sleep 2 & , je vais pas du tout attendre et j'aurais la main directement
         // Vérifie si la commande se termine par '&'
         int is_background = 0;
         if (i > 0 && strcmp(args[i - 1], "&") == 0) {
@@ -95,7 +98,7 @@ int main() {
                     // Continuer même si la mesure échoue
                 }
                 // Le parent attend la fin de l'exécution de l'enfant grâce à waitpid
-                
+
                 waitpid(pid, &status, 0);
                 // Mesure du temps après l'exécution de la commande
                 if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
